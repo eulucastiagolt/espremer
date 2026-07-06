@@ -1,65 +1,183 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useCallback } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import Header from '@/components/Header';
+import HeroSection from '@/components/HeroSection';
+import DropZone from '@/components/DropZone';
+import FileCard from '@/components/FileCard';
+import BatchActions from '@/components/BatchActions';
+import { ImageFile, ImageFormat, CompressionOptions } from '@/lib/types';
+import { compressImage } from '@/lib/image-processor';
+
+interface CompressedResult {
+  blob: Blob;
+  url: string;
+  format: ImageFormat;
+}
 
 export default function Home() {
+  const [files, setFiles] = useState<ImageFile[]>([]);
+  const [results, setResults] = useState<Map<string, CompressedResult>>(new Map());
+  const [processing, setProcessing] = useState<Set<string>>(new Set());
+  const [errors, setErrors] = useState<Map<string, string>>(new Map());
+
+  const handleFilesAdded = useCallback((newFiles: ImageFile[]) => {
+    setFiles(prev => [...prev, ...newFiles]);
+  }, []);
+
+  const handleRemove = useCallback((id: string) => {
+    // Revoke preview and compressed URLs to prevent memory leaks
+    const file = files.find(f => f.id === id);
+    if (file?.preview) URL.revokeObjectURL(file.preview);
+    const result = results.get(id);
+    if (result?.url) URL.revokeObjectURL(result.url);
+
+    setFiles(prev => prev.filter(f => f.id !== id));
+    setResults(prev => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+    setErrors(prev => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+  }, [files, results]);
+
+  const handleCompress = useCallback(async (id: string, options: CompressionOptions) => {
+    const file = files.find(f => f.id === id);
+    if (!file) return;
+
+    setProcessing(prev => new Set(prev).add(id));
+    setErrors(prev => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+
+    try {
+      const { blob, format } = await compressImage(file.file, options);
+      const url = URL.createObjectURL(blob);
+
+      setResults(prev => {
+        const next = new Map(prev);
+        // Revoke old URL if exists
+        const old = next.get(id);
+        if (old?.url) URL.revokeObjectURL(old.url);
+        next.set(id, { blob, url, format });
+        return next;
+      });
+    } catch (err) {
+      setErrors(prev => {
+        const next = new Map(prev);
+        next.set(id, err instanceof Error ? err.message : 'Erro ao processar imagem');
+        return next;
+      });
+    } finally {
+      setProcessing(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }, [files]);
+
+  const handleCompressAll = useCallback(async (options: CompressionOptions) => {
+    const pending = files.filter(
+      f => !results.has(f.id) && !processing.has(f.id)
+    );
+    await Promise.all(pending.map(f => handleCompress(f.id, options)));
+  }, [files, results, processing, handleCompress]);
+
+  const handleDownloadAll = useCallback(() => {
+    results.forEach((result, id) => {
+      const file = files.find(f => f.id === id);
+      if (!file) return;
+
+      const link = document.createElement('a');
+      link.href = result.url;
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+      link.download = `${baseName}_espremido.${result.format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  }, [results, files]);
+
+  const handleClearAll = useCallback(() => {
+    results.forEach((r) => {
+      if (r.url) URL.revokeObjectURL(r.url);
+    });
+    files.forEach((f) => {
+      if (f.preview) URL.revokeObjectURL(f.preview);
+    });
+    setFiles([]);
+    setResults(new Map());
+    setErrors(new Map());
+    setProcessing(new Set());
+  }, [files, results]);
+
+  const hasFiles = files.length > 0;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
+      <Header />
+
+      <main>
+        {!hasFiles && <HeroSection />}
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+          {/* Drop Zone */}
+          <div className={hasFiles ? 'py-6' : ''}>
+            <DropZone onFilesAdded={handleFilesAdded} />
+          </div>
+
+          {/* File List */}
+          {hasFiles && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-6 space-y-4 max-w-2xl mx-auto"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+              {/* Batch Actions */}
+              <BatchActions
+                files={files}
+                results={results}
+                isProcessing={processing.size > 0}
+                onCompressAll={handleCompressAll}
+                onDownloadAll={handleDownloadAll}
+                onClearAll={handleClearAll}
+              />
+
+              {/* Individual Files */}
+              <AnimatePresence mode="popLayout">
+                {files.map((file) => (
+                  <FileCard
+                    key={file.id}
+                    image={file}
+                    onRemove={handleRemove}
+                    onCompress={handleCompress}
+                    compressedResult={results.get(file.id)}
+                    isProcessing={processing.has(file.id)}
+                    error={errors.get(file.id)}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-zinc-200 dark:border-zinc-800 py-8">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-sm text-zinc-400">
+            Espremer — Processamento 100% no navegador. Nenhum dado é enviado para servidores.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

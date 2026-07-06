@@ -144,9 +144,9 @@ export default function ImageComparisonSlider({
                 setSliderPosition(prev => Math.min(100, prev + 2));
               }
             }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
+            className="absolute top-1/2 left-1/2 
               w-10 h-10 rounded-full bg-white shadow-lg border-2 border-zinc-200 
-              flex items-center justify-center transition-transform outline-none"
+              flex items-center justify-center outline-none"
             style={{ 
               transform: `translate(-50%, -50%) scale(${isDragging ? 1.15 : 1})`,
               boxShadow: isDragging ? '0 4px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.2)'

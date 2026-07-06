@@ -7,6 +7,7 @@ import HeroSection from '@/components/HeroSection';
 import DropZone from '@/components/DropZone';
 import FileCard from '@/components/FileCard';
 import BatchActions from '@/components/BatchActions';
+import JSZip from 'jszip';
 import { ImageFile, ImageFormat, CompressionOptions } from '@/lib/types';
 import { compressImage } from '@/lib/image-processor';
 
@@ -91,19 +92,34 @@ export default function Home() {
     await Promise.all(pending.map(f => handleCompress(f.id, options)));
   }, [files, results, processing, handleCompress]);
 
-  const handleDownloadAll = useCallback(() => {
+  const handleRecompressAll = useCallback(async (options: CompressionOptions) => {
+    // Clear all old results first
+    results.forEach((r) => {
+      if (r.url) URL.revokeObjectURL(r.url);
+    });
+    setResults(new Map());
+    setErrors(new Map());
+
+    // Re-compress all files
+    await Promise.all(files.map(f => handleCompress(f.id, options)));
+  }, [files, results, handleCompress]);
+
+  const handleDownloadAll = useCallback(async () => {
+    const zip = new JSZip();
     results.forEach((result, id) => {
       const file = files.find(f => f.id === id);
       if (!file) return;
-
-      const link = document.createElement('a');
-      link.href = result.url;
       const baseName = file.name.replace(/\.[^.]+$/, '');
-      link.download = `${baseName}_espremido.${result.format}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      zip.file(`${baseName}_espremido.${result.format}`, result.blob);
     });
+    const content = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(content);
+    link.download = 'espremidos.zip';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
   }, [results, files]);
 
   const handleClearAll = useCallback(() => {
@@ -147,6 +163,7 @@ export default function Home() {
                 results={results}
                 isProcessing={processing.size > 0}
                 onCompressAll={handleCompressAll}
+                onRecompressAll={handleRecompressAll}
                 onDownloadAll={handleDownloadAll}
                 onClearAll={handleClearAll}
               />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Trash2, 
@@ -10,6 +10,7 @@ import {
   Check,
   AlertCircle,
   Image as ImageIcon,
+  Eye,
 } from 'lucide-react';
 import { ImageFile, CompressionOptions, DEFAULT_COMPRESSION_OPTIONS, GIF_DEFAULT_OPTIONS, ImageFormat } from '@/lib/types';
 import ImageComparisonSlider from './ImageComparisonSlider';
@@ -38,6 +39,7 @@ export default function FileCard({
 }: FileCardProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
   const [options, setOptions] = useState<CompressionOptions>(
     image.isGif ? { ...GIF_DEFAULT_OPTIONS } : { ...DEFAULT_COMPRESSION_OPTIONS }
   );
@@ -49,6 +51,18 @@ export default function FileCard({
   const optionsKey = useMemo(() => JSON.stringify(options), [options]);
   const [lastCompressedKey, setLastCompressedKey] = useState<string | null>(null);
   const hasNewChanges = compressedResult && lastCompressedKey !== optionsKey;
+
+  // Reset comparison view when settings change after compression
+  useEffect(() => {
+    if (hasNewChanges) setShowComparison(false);
+  }, [hasNewChanges]);
+
+  // When compressedResult arrives from batch and lastCompressedKey is null, sync it
+  useEffect(() => {
+    if (compressedResult && lastCompressedKey === null) {
+      setLastCompressedKey(optionsKey);
+    }
+  }, [compressedResult, lastCompressedKey, optionsKey]);
 
   const handleCompress = useCallback(() => {
     onCompress(image.id, options);
@@ -119,13 +133,15 @@ export default function FileCard({
           </div>
 
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-              title="Configurações"
-            >
-              <Settings className="w-4 h-4 text-zinc-500" />
-            </button>
+            {!isProcessing && (
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                title="Configurações"
+              >
+                <Settings className="w-4 h-4 text-zinc-500" />
+              </button>
+            )}
             <button
               onClick={() => onRemove(image.id)}
               className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -371,22 +387,47 @@ export default function FileCard({
               animate={{ opacity: 1, y: 0 }}
               className="space-y-3"
             >
+              {/* Compact result summary row */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-green-500" />
+                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30">
+                    <Check className="w-3.5 h-3.5 text-green-500" />
+                  </div>
                   <span className="text-sm font-medium text-green-600 dark:text-green-400">
                     {compressionRatio > 0 
                       ? `${compressionRatio}% menor` 
                       : `${Math.abs(compressionRatio)}% maior`}
                   </span>
+                  <span className="text-xs text-zinc-400">
+                    {formatBytes(image.size)} → {formatBytes(compressedResult.blob.size)}
+                  </span>
                 </div>
-                <span className="text-sm text-zinc-500">
-                  {formatBytes(compressedResult.blob.size)}
-                </span>
+                <div className="flex items-center gap-1">
+                  {image.preview && (
+                    <button
+                      onClick={() => setShowComparison(!showComparison)}
+                      className={`p-2 rounded-lg transition-colors ${
+                        showComparison
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                          : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500'
+                      }`}
+                      title="Ver comparação"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={handleDownload}
+                    className="p-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                    title="Baixar"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              
+
               {/* Compression bar */}
-              <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: '100%' }}
                   animate={{ 
@@ -399,25 +440,22 @@ export default function FileCard({
                 />
               </div>
 
-              {/* Before/After Comparison */}
-              {image.preview && (
-                <ImageComparisonSlider
-                  originalSrc={image.preview}
-                  compressedSrc={compressedResult.url}
-                  originalName={image.name}
-                  originalSize={image.size}
-                  compressedSize={compressedResult.blob.size}
-                  originalDimensions={image.width && image.height ? { width: image.width, height: image.height } : undefined}
-                />
+              {/* Before/After Comparison - only shown on demand */}
+              {showComparison && image.preview && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                >
+                  <ImageComparisonSlider
+                    originalSrc={image.preview}
+                    compressedSrc={compressedResult.url}
+                    originalName={image.name}
+                    originalSize={image.size}
+                    compressedSize={compressedResult.blob.size}
+                    originalDimensions={image.width && image.height ? { width: image.width, height: image.height } : undefined}
+                  />
+                </motion.div>
               )}
-
-              <button
-                onClick={handleDownload}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                Baixar {compressedResult.format.toUpperCase()}
-              </button>
             </motion.div>
           )}
 
@@ -431,10 +469,13 @@ export default function FileCard({
           )}
 
           {isProcessing && (
-            <div className="flex items-center justify-center gap-2 py-2.5 text-zinc-500">
+            <button
+              disabled
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-lg font-medium cursor-not-allowed"
+            >
               <Loader2 className="w-4 h-4 animate-spin" />
               <span className="text-sm">Processando...</span>
-            </div>
+            </button>
           )}
         </div>
       </motion.div>

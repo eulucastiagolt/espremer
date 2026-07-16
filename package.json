@@ -1,18 +1,29 @@
 {
   "name": "espremer",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "prisma generate && next build --webpack",
+    "icons:sync": "tsx scripts/sync-icon-catalog.ts",
+    "icons:migrate-large": "tsx scripts/migrate-large-icon-data.ts",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@hcaptcha/react-hcaptcha": "^2.0.2",
     "@jsquash/avif": "^2.1.1",
     "@jsquash/jpeg": "^1.6.0",
     "@jsquash/png": "^3.1.1",
     "@jsquash/webp": "^1.5.0",
+    "@next-auth/prisma-adapter": "^1.0.7",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@supabase/ssr": "^0.12.3",
+    "@supabase/supabase-js": "^2.110.6",
+    "@types/prismjs": "^1.26.6",
+    "bcryptjs": "^3.0.3",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.42.2",
     "gifsicle-wasm-browser": "^1.5.19",
@@ -20,19 +31,29 @@
     "jszip": "^3.10.1",
     "lucide-react": "^1.23.0",
     "next": "16.2.10",
+    "next-auth": "^4.24.14",
+    "pg": "^8.22.0",
+    "prisma": "^7.8.0",
+    "prismjs": "^1.30.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-simple-code-editor": "^0.14.1",
+    "resend": "^6.17.2",
+    "svgo": "^4.0.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/file-saver": "^2.0.7",
     "@types/jszip": "^3.4.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
+    "tsx": "^4.23.1",
     "typescript": "^5"
   }
 }

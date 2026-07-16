@@ -73,3 +73,15 @@ export function getImageDimensions(file: File): Promise<{ width: number; height:
     img.src = url;
   });
 }
+
+export function isSvgFile(file: File): boolean {
+  return (
+    file.type === 'image/svg+xml' ||
+    file.name.toLowerCase().endsWith('.svg')
+  );
+}
+
+/** Converte um markup SVG em um data: URI pronto para usar em <img src> ou CSS. */
+export function svgToDataUri(svg: string): string {
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}

@@ -107,3 +107,66 @@ select {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
+
+/* Code editor — cores Prism customizadas (light + dark) */
+.npm__react-simple-code-editor__textarea,
+.npm__react-simple-code-editor__textarea:focus {
+  outline: none !important;
+}
+
+/* Texto base do editor (sem highlight) — precisa de cor explícita porque o
+   <textarea> herda `color: inherit`, e o fundo do editor é claro/escuro. */
+.code-highlight {
+  color: #18181b; /* zinc-900 — light */
+}
+.dark .code-highlight {
+  color: #fafafa; /* zinc-50 — dark */
+}
+
+/* Token colors — light (sobre Fundo zinc-50) */
+.code-highlight .token.tag,
+.code-highlight .token.keyword {
+  color: #d92a73;
+}
+.code-highlight .token.attr-name {
+  color: #c53030;
+}
+.code-highlight .token.attr-value,
+.code-highlight .token.string {
+  color: #0b7d3b;
+}
+.code-highlight .token.punctuation {
+  color: #6b7280;
+}
+.code-highlight .token.comment {
+  color: #9ca3af;
+  font-style: italic;
+}
+.code-highlight .token.prolog,
+.code-highlight .token.doctype {
+  color: #9ca3af;
+}
+
+/* Token colors — dark (sobre Fundo zinc-950) */
+.dark .code-highlight .token.tag,
+.dark .code-highlight .token.keyword {
+  color: #f472b6;
+}
+.dark .code-highlight .token.attr-name {
+  color: #fca5a5;
+}
+.dark .code-highlight .token.attr-value,
+.dark .code-highlight .token.string {
+  color: #86efac;
+}
+.dark .code-highlight .token.punctuation {
+  color: #a1a1aa;
+}
+.dark .code-highlight .token.comment {
+  color: #71717a;
+  font-style: italic;
+}
+.dark .code-highlight .token.prolog,
+.dark .code-highlight .token.doctype {
+  color: #71717a;
+}

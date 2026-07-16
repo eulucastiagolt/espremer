@@ -2,8 +2,17 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Droplets, Info, ExternalLink, Sun, Moon, Monitor } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
+
+const navLinks = [
+  { href: '/', label: 'Início' },
+  { href: '/images', label: 'Imagens' },
+  { href: '/svg', label: 'SVG' },
+  { href: '/community', label: 'Comunidade' },
+];
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -47,6 +56,8 @@ function ThemeToggle() {
 }
 
 export default function Header() {
+  const pathname = usePathname();
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -20 }}
@@ -57,8 +68,8 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:shadow-blue-500/40 transition-shadow">
               <Droplets className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -66,14 +77,33 @@ export default function Header() {
                 Espremer
               </h1>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 -mt-0.5">
-                Otimizador de Imagens
+                Imagens &amp; SVG
               </p>
             </div>
-          </div>
+          </Link>
 
-          {/* Navigation */}
+          {/* Navigation + controls */}
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full text-xs text-zinc-600 dark:text-zinc-400">
+            <nav className="hidden sm:flex items-center gap-1 mr-2">
+              {navLinks.map((link) => {
+                const active = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="hidden md:flex items-center gap-1 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full text-xs text-zinc-600 dark:text-zinc-400">
               <Info className="w-3.5 h-3.5" />
               <span>100% no navegador</span>
             </div>

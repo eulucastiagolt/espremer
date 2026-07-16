@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String
+  isActive  Boolean  @default(true) @map("is_active")
+  role      String   @default("admin")
+  emailVerified DateTime? @map("email_verified")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  verificationTokens EmailVerificationToken[]
+
+  @@map("users")
+}
+
+model EmailVerificationToken {
+  token     String   @id
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model SharedIcon {
+  id        String    @id @default(uuid())
+  name      String
+  svg       String
+  isPublic  Boolean   @default(false) @map("is_public")
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  removalRequests RemovalRequest[]
+
+  @@map("shared_icons")
+}
+
+model CommunityIcon {
+  id           String    @id @default(uuid())
+  name         String
+  svg          String?
+  filePath     String?   @map("file_path")
+  categories   String[]
+  status       String    @default("pending")
+  submittedBy  String?   @map("submitted_by")
+  reviewedBy   String?   @map("reviewed_by")
+  reviewedAt   DateTime? @map("reviewed_at")
+  rejectionReason String? @map("rejection_reason")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("community_icons")
+}
+
+model IconFamily {
+  id        String      @id
+  name      String
+  prefix    String
+  license   String
+  height    Int         @default(24)
+  category  String
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+  icons     IconAsset[]
+
+  @@map("icon_families")
+}
+
+model IconAsset {
+  id         String     @id @default(uuid())
+  familyId   String     @map("family_id")
+  name       String
+  filePath   String     @map("file_path")
+  hash       String
+  categories String[]
+  isActive   Boolean    @default(true) @map("is_active")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+  family     IconFamily @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, name])
+  @@index([familyId, isActive])
+  @@map("icon_assets")
+}
+
+model RemovalRequest {
+  id          String    @id @default(uuid())
+  shareId     String?   @map("share_id")
+  reason      String
+  email       String?
+  status      String    @default("pending")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  processedAt DateTime? @map("processed_at")
+
+  share SharedIcon? @relation(fields: [shareId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@map("removal_requests")
+}

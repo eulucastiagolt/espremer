@@ -6,6 +6,7 @@ import { getUserPermissions, hasUserPermission, setUserPermissions } from '@/lib
 import { prisma } from '@/lib/prisma';
 import { createAdminInvitation } from '@/lib/admin-invitations';
 import { emailLayout, escapeHtml, sendTransactionalEmail } from '@/lib/email';
+import { getPublicOrigin } from '@/lib/public-url';
 
 const strongPassword = (value: string) => value.length >= 8 && /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value) && /[^A-Za-z0-9]/.test(value);
 const canManageUsers = async (user: { id: string; role: string } | null) => Boolean(user && (isSuperAdmin(user) || await hasUserPermission(user, 'admins.manage')));
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
   const permissions = await setUserPermissions(user.id, Array.isArray(body.permissions) ? body.permissions : []);
   if (generatePassword) {
     const token = await createAdminInvitation({ userId: user.id, email: user.email });
-    const activationUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/admin/activate?token=${token}`;
+    const activationUrl = `${getPublicOrigin(request)}/admin/activate?token=${token}`;
     try { await sendTransactionalEmail({ to: email, subject: '[Espremer] Convite para o painel administrativo', html: emailLayout('Seu acesso administrativo', `<p>Olá, ${escapeHtml(name)}. Seu acesso foi criado.</p><p><a href="${activationUrl}">Clique aqui para definir sua senha e acessar o painel</a>. Este link expira em 24 horas.</p>`) }); } catch (error) { console.error('Admin invitation email error:', error); }
   }
   return NextResponse.json({ id: user.id, name, email, role: user.role, isActive: true, permissions }, { status: 201 });

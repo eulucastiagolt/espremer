@@ -144,6 +144,9 @@ export async function fetchSetCollection(
   const response = await fetch(`${API}/catalog?family=${encodeURIComponent(prefix)}`, { cache: 'no-store' });
   if (!response.ok) throw new Error(`Icon catalog ${response.status}: ${prefix}`);
   const data = (await response.json()) as { family: { prefix: string; name: string; license: string; total: number }; icons: Array<{ name: string; categories?: string[] }> };
+  if (!data.family || !Array.isArray(data.icons)) {
+    throw new Error(`Icon catalog response is invalid: ${prefix}`);
+  }
 
   // Constrói categorias a partir dos dados da API
   const categories: Record<string, string[]> = {};

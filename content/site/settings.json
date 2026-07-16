@@ -1,0 +1,9 @@
+{
+  "siteName": "Espremer",
+  "contactEmail": "contato@ltcode.com.br",
+  "maintenanceMode": false,
+  "maintenanceTitle": "Teste",
+  "maintenanceContent": "Teste 123",
+  "allowPublicSharing": true,
+  "defaultShareDuration": "24h"
+}
